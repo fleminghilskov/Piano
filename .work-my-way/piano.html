@@ -1,0 +1,111 @@
+<!-- my-way-piano:start -->
+<style>
+#my-way-piano { position:sticky; top:0; z-index:1000; box-sizing:border-box; width:min(100%,1020px); padding:10px 20px; background:#181818; color:white; font:16px Arial,sans-serif; }
+#my-way-piano h2 { margin:0 0 6px; text-align:center; color:white; font: bold 24px Arial,sans-serif; }
+#my-way-piano svg { display:block; width:100%; max-height:150px; }
+.my-way-chord { cursor:pointer; border-radius:4px; }
+.my-way-chord:hover,.my-way-chord:focus-visible { outline:2px solid #7030a0; }
+.my-way-chord[aria-pressed="true"] { background:#fff0a3; outline:2px solid #7030a0; }
+@media print { #my-way-piano { position:static; } }
+</style>
+<section id="my-way-piano" aria-label="Klaviatur">
+  <h2 id="my-way-chord-title" aria-live="polite">D</h2>
+  <svg viewBox="0 0 980 150" role="img" aria-label="Klaviatur fra C1 til B5"></svg>
+</section>
+<script>
+(() => {
+  'use strict';
+  const song = __SONG_JSON__;
+  const panel = document.getElementById('my-way-piano');
+  const svg = panel.querySelector('svg');
+  const title = document.getElementById('my-way-chord-title');
+  const ns = 'http://www.w3.org/2000/svg';
+  const keys = new Map();
+  const flatNames = {Db:'C#', Eb:'D#', Gb:'F#', Ab:'G#', Bb:'A#'};
+  const normalize = note => (flatNames[note.slice(0,-1)] || note.slice(0,-1)) + note.slice(-1);
+  function element(tag, attributes) {
+    const node = document.createElementNS(ns, tag);
+    Object.entries(attributes).forEach(([key,value]) => node.setAttribute(key,value));
+    svg.appendChild(node);
+    return node;
+  }
+  for (let octave=1; octave<=5; octave++) {
+    ['C','D','E','F','G','A','B'].forEach((note,i) => {
+      const x=((octave-1)*7+i)*28;
+      const key=element('rect',{x,y:0,width:28,height:148,fill:'white',stroke:'#333','stroke-width':2});
+      keys.set(note+octave,{key,base:'white'});
+      if (note==='C') element('text',{x:x+14,y:136,fill:'#333','text-anchor':'middle','font-size':11}).textContent=note+octave;
+    });
+  }
+  for (let octave=1; octave<=5; octave++) {
+    [[0,'C#'],[1,'D#'],[3,'F#'],[4,'G#'],[5,'A#']].forEach(([i,note]) => {
+      const x=((octave-1)*7+i+1)*28-9;
+      const key=element('rect',{x,y:0,width:18,height:90,fill:'#222',stroke:'#444','stroke-width':2});
+      keys.set(note+octave,{key,base:'#222'});
+    });
+  }
+  let active;
+  function show(chord,section,trigger) {
+    keys.forEach(({key,base}) => key.setAttribute('fill',base));
+    [[chord[2],'#ffe72e'],[chord[1],'#ff4040']].forEach(([notes,color]) => {
+      notes.split('-').forEach(note => keys.get(normalize(note)).key.setAttribute('fill',color));
+    });
+    title.textContent=section+' · '+chord[0];
+    svg.setAttribute('aria-label',chord[0]+'. Venstre hånd: '+chord[1]+'. Højre hånd: '+chord[2]);
+    if (active) active.setAttribute('aria-pressed','false');
+    active=trigger;
+    if (active) active.setAttribute('aria-pressed','true');
+  }
+  let section=0;
+  let outroD=0;
+  document.querySelectorAll('p').forEach(paragraph => {
+    const heading=paragraph.textContent.match(/Verse\s+([1-5])\s*:/i);
+    if (heading) section=Number(heading[1]);
+    if (paragraph.textContent.includes('(C#+)')) section=6;
+    const walker=document.createTreeWalker(paragraph,NodeFilter.SHOW_TEXT);
+    const nodes=[];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(node => {
+      // Also recognize the original text's missing ')' after F#m/C#.
+      const pattern=/\(([A-G](?:#|b)?(?:maj7|dim7|sus4|m7|m6|m|7|6|\+)?(?:\/[A-G](?:#|b)?)?)\)?/g;
+      const matches=[...node.textContent.matchAll(pattern)];
+      if (!matches.length) return;
+      const fragment=document.createDocumentFragment();
+      let offset=0;
+      matches.forEach(match => {
+        fragment.appendChild(document.createTextNode(node.textContent.slice(offset,match.index)));
+        const name=match[1]==='F#m/C' ? 'F#m/C#' : match[1];
+        const options=song[section][1].filter(chord => chord[0]===name);
+        let chord=options[0];
+        if (section===6 && name==='D' && outroD++>0) chord=options[options.length-1];
+        if (!chord) chord=song.flatMap(part=>part[1]).find(item=>item[0]===name);
+        if (chord) {
+          const trigger=document.createElement('span');
+          trigger.className='my-way-chord';
+          trigger.textContent=match[0];
+          trigger.tabIndex=0;
+          trigger.setAttribute('role','button');
+          trigger.setAttribute('aria-pressed','false');
+          trigger.setAttribute('aria-label','Vis '+name+' på klaviaturet');
+          const sectionName=song[section][0];
+          trigger.addEventListener('click',()=>show(chord,sectionName,trigger));
+          fragment.appendChild(trigger);
+        } else fragment.appendChild(document.createTextNode(match[0]));
+        offset=match.index+match[0].length;
+      });
+      fragment.appendChild(document.createTextNode(node.textContent.slice(offset)));
+      node.replaceWith(fragment);
+    });
+  });
+  // Capture here to avoid the existing Enter shortcut starting auto-scroll.
+  window.addEventListener('keydown',event => {
+    if ((event.key==='Enter' || event.key===' ') && event.target.classList.contains('my-way-chord')) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.target.click();
+    }
+  },true);
+  show(song[0][1][0],song[0][0]);
+})();
+</script>
+<!-- my-way-piano:end -->

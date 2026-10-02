@@ -1,0 +1,7 @@
+#my-way-piano { position:sticky; top:0; z-index:1000; box-sizing:border-box; width:min(100%,1020px); padding:10px 20px; background:#181818; color:white; font:16px Arial,sans-serif; }
+#my-way-piano h2 { margin:0 0 6px; text-align:center; color:white; font: bold 24px Arial,sans-serif; }
+#my-way-piano svg { display:block; width:100%; max-height:150px; }
+.my-way-chord { cursor:pointer; border-radius:4px; }
+.my-way-chord:hover,.my-way-chord:focus-visible { outline:2px solid #7030a0; }
+.my-way-chord[aria-pressed="true"] { background:#fff0a3; outline:2px solid #7030a0; }
+@media print { #my-way-piano { position:static; } }
