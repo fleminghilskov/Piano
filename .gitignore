@@ -1,0 +1,16 @@
+# Python virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code
+.vscode/
+
+# Midlertidige filer
+~$*
+*.tmp
+
+# Gamle filer/mappe hvis de ikke skal på GitHub
+old/
